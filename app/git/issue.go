@@ -33,14 +33,14 @@ func MakeIssue(title, body, screenshot string) *Issue {
 	return &issue
 }
 
-func PostIssue(body io.Reader, url string) error {
-	req, err := http.NewRequest(http.MethodPost, url+"/issues", body)
+func PostIssue(body io.Reader, url, token string) error {
+	req, err := http.NewRequest(http.MethodPost, config.Config.RequestURL+"/repos/"+url+"/issues", body)
 	if err != nil {
 		log.Println("failed to build request for post issue: ", err)
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "token "+config.Config.GitToken)
+	req.Header.Set("Authorization", "token "+token)
 
 	client := http.DefaultClient
 
@@ -52,7 +52,7 @@ func PostIssue(body io.Reader, url string) error {
 
 	defer response.Body.Close()
 
-	if response.StatusCode != 201 {
+	if response.StatusCode != 200 {
 		return errors.New("failed to create issue")
 	}
 	return nil

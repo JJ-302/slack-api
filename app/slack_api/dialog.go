@@ -6,13 +6,13 @@ import (
 	"github.com/nlopes/slack"
 )
 
-func MakeDialog() slack.Dialog {
-	repos := git.GetRepos()
+func MakeIssueDialog(uid string) slack.Dialog {
+	repos := git.GetRepos(uid)
 	var dialogSelection []slack.DialogSelectOption
 	for _, repo := range *repos {
 		selection := slack.DialogSelectOption{
 			Label: repo.Name,
-			Value: repo.URL,
+			Value: repo.FullName,
 		}
 		dialogSelection = append(dialogSelection, selection)
 	}
@@ -20,7 +20,7 @@ func MakeDialog() slack.Dialog {
 	dialog := slack.Dialog{
 		Title:       "Create issue",
 		SubmitLabel: "Submit",
-		CallbackID:  "coffee_order_form",
+		CallbackID:  "createIssue",
 		Elements: []slack.DialogElement{
 			slack.DialogInputSelect{
 				DialogInput: slack.DialogInput{
@@ -49,6 +49,23 @@ func MakeDialog() slack.Dialog {
 				Name:        "screenShot",
 				Optional:    true,
 				Placeholder: "マークダウン形式で貼り付けてください",
+			},
+		},
+	}
+	return dialog
+}
+
+func MakeTokenDialog() slack.Dialog {
+	dialog := slack.Dialog{
+		Title:       "Register token",
+		SubmitLabel: "Submit",
+		CallbackID:  "registerToken",
+		Elements: []slack.DialogElement{
+			slack.DialogInput{
+				Label:       "Token",
+				Type:        slack.InputTypeText,
+				Name:        "token",
+				Placeholder: "トークンを入力してください",
 			},
 		},
 	}

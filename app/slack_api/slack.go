@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"projects/slack-api/app/db"
 	"projects/slack-api/app/git"
 	"projects/slack-api/config"
 	"strings"
@@ -28,32 +29,63 @@ func (api *SlackApi) ListenOnEvent() {
 	for msg := range rtm.IncomingEvents {
 		switch ev := msg.Data.(type) {
 		case *slack.MessageEvent:
+			if ev.Channel != config.Config.ChickTag {
+				break
+			}
+
 			if !strings.HasPrefix(ev.Msg.Text, fmt.Sprintf("<@%s>", api.BotID)) {
 				break
 			}
 
-			attachment := slack.Attachment{
-				Text:       "Hello! May I help you?",
-				Color:      "#3AA3E3",
-				CallbackID: "showdialog",
-				Actions: []slack.AttachmentAction{
-					{
-						Name:  "indexIssue",
-						Text:  "Show issues",
-						Type:  "button",
-						Value: "indexIssue",
-					}, {
-						Name:  "createIssue",
-						Text:  "Create issue",
-						Type:  "button",
-						Value: "createIssue",
+			msg := strings.Split(strings.TrimSpace(ev.Msg.Text), " ")[1:]
+			if len(msg) != 0 && msg[0] == "issue" {
+				attachment := slack.Attachment{
+					Text:       "Hello! May I help you?",
+					Color:      "#2c2d30",
+					CallbackID: "createIssue",
+					Actions: []slack.AttachmentAction{
+						{
+							Name:  "createIssue",
+							Text:  "Create issue",
+							Type:  "button",
+							Style: "primary",
+							Value: "createIssue",
+						}, {
+							Name:  "cancel",
+							Text:  "Cancel",
+							Type:  "button",
+							Style: "danger",
+							Value: "cancel",
+						},
 					},
-				},
+				}
+				options := slack.MsgOptionAttachments(attachment)
+				api.Client.PostMessage(ev.Channel, options)
+
+			} else if len(msg) != 0 && msg[0] == "token" {
+				attachment := slack.Attachment{
+					Text:       "Hello! May I help you?",
+					Color:      "#2c2d30",
+					CallbackID: "registerToken",
+					Actions: []slack.AttachmentAction{
+						{
+							Name:  "registerToken",
+							Text:  "Register token",
+							Type:  "button",
+							Style: "primary",
+							Value: "registerToken",
+						}, {
+							Name:  "cancel",
+							Text:  "Cancel",
+							Type:  "button",
+							Style: "danger",
+							Value: "cancel",
+						},
+					},
+				}
+				options := slack.MsgOptionAttachments(attachment)
+				api.Client.PostMessage(ev.Channel, options)
 			}
-
-			options := slack.MsgOptionAttachments(attachment)
-
-			api.Client.PostMessage(ev.Channel, options)
 		}
 	}
 }
@@ -97,40 +129,90 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 				return
 			}
 
-			if err := api.Client.OpenDialogContext(context.TODO(), interaction.TriggerID, MakeDialog()); err != nil {
+			uid := interaction.User.ID
+			if err := api.Client.OpenDialogContext(context.TODO(), interaction.TriggerID, MakeIssueDialog(uid)); err != nil {
 				log.Print("open dialog failed: ", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			text := fmt.Sprintf(":pencil2: Edit by @%s", user.User.Profile.DisplayName)
 			overwriteMessage(w, interaction, text)
+
+		case "registerToken":
+			user := GetUserInfo(interaction.User.ID)
+			if !user.Ok {
+				log.Print("failed to get user info")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			if err := api.Client.OpenDialogContext(context.TODO(), interaction.TriggerID, MakeTokenDialog()); err != nil {
+				log.Print("open dialog failed: ", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			text := fmt.Sprintf(":pencil2: Edit by @%s", user.User.Profile.DisplayName)
+			overwriteMessage(w, interaction, text)
+
+		case "cancel":
+			user := GetUserInfo(interaction.User.ID)
+			if !user.Ok {
+				log.Print("failed to get user info")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			text := fmt.Sprintf(":x: Canceled by @%s", user.User.Profile.DisplayName)
+			overwriteMessage(w, interaction, text)
 		}
 
 	} else if interaction.Type == slack.InteractionTypeDialogSubmission {
-		issue := git.MakeIssue(
-			interaction.Submission["issueTitle"],
-			interaction.Submission["issueContents"],
-			interaction.Submission["screenShot"],
-		)
+		switch interaction.CallbackID {
+		case "createIssue":
+			issue := git.MakeIssue(
+				interaction.Submission["issueTitle"],
+				interaction.Submission["issueContents"],
+				interaction.Submission["screenShot"],
+			)
 
-		jsonValue, err := json.Marshal(issue)
-		if err != nil {
-			log.Println("marshal issue failed: ", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		err = git.PostIssue(bytes.NewBuffer(jsonValue), interaction.Submission["repository"])
-		if err != nil {
-			log.Println(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			attachment := slack.Attachment{
-				Text:       ":x: Failed to post issue",
-				Color:      "#3AA3E3",
-				CallbackID: "showdialog",
+			jsonValue, err := json.Marshal(issue)
+			if err != nil {
+				log.Println("marshal issue failed: ", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
-			options := slack.MsgOptionAttachments(attachment)
-			api.Client.PostMessage(interaction.Channel.ID, options)
-			return
+			var _token db.Token
+			token := _token.Get(interaction.User.ID)
+
+			err = git.PostIssue(bytes.NewBuffer(jsonValue), interaction.Submission["repository"], token.Token)
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				attachment := slack.Attachment{
+					Text:       ":x: Failed to post issue",
+					Color:      "#3AA3E3",
+					CallbackID: "showdialog",
+				}
+				options := slack.MsgOptionAttachments(attachment)
+				api.Client.PostMessage(interaction.Channel.ID, options)
+				return
+			}
+
+		case "registerToken":
+			token := db.New(interaction.Submission["token"])
+			err := token.Save(interaction.User.ID)
+			if err != nil {
+				log.Printf("Failed to save token: %v", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				attachment := slack.Attachment{
+					Text:       ":x: Failed to post issue",
+					Color:      "#3AA3E3",
+					CallbackID: "registertoken",
+				}
+				options := slack.MsgOptionAttachments(attachment)
+				api.Client.PostMessage(interaction.Channel.ID, options)
+				return
+			}
 		}
 
 		attachment := slack.Attachment{

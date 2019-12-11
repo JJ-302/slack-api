@@ -9,11 +9,12 @@ import (
 
 type ConfigList struct {
 	Port       int
+	ChickTag   string
 	Token      string
 	SlackURL   string
 	BotID      string
 	RequestURL string
-	GitToken   string
+	ProjectID  string
 }
 
 var Config ConfigList
@@ -27,10 +28,11 @@ func init() {
 
 	Config = ConfigList{
 		Port:       cfg.Section("web").Key("port").MustInt(),
+		ChickTag:   cfg.Section("api").Key("chicktag").String(),
 		Token:      cfg.Section("api").Key("token").String(),
 		SlackURL:   cfg.Section("api").Key("url").String(),
 		BotID:      cfg.Section("api").Key("botID").String(),
 		RequestURL: cfg.Section("git").Key("url").String(),
-		GitToken:   cfg.Section("git").Key("token").String(),
+		ProjectID:  cfg.Section("db").Key("projectID").String(),
 	}
 }
