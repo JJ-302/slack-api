@@ -33,20 +33,18 @@ func (token *Token) Save(uid string) error {
 	return err
 }
 
-func (token *Token) Get(uid string) *Token {
+func (token *Token) Get(uid string) {
 	ctx := context.Background()
 	projectID := config.Config.ProjectID
 	client, err := datastore.NewClient(ctx, projectID)
 	if err != nil {
 		log.Printf("Failed to register token: %v", err)
-		return token
+		return
 	}
 
 	kind := "Token"
 	tokenKey := datastore.NameKey(kind, uid, nil)
 	if err = client.Get(ctx, tokenKey, token); err != nil {
 		log.Printf("Failed to get token: %v", err)
-		return token
 	}
-	return token
 }

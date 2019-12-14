@@ -22,8 +22,8 @@ func GetRepos(uid string) *[]Repository {
 		log.Println("failed to build request for get repos: ", err)
 		return nil
 	}
-	var _token db.Token
-	token := _token.Get(uid)
+	var token db.Token
+	token.Get(uid)
 
 	req.Header.Set("Authorization", "token "+token.Token)
 	client := http.DefaultClient

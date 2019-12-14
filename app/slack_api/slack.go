@@ -120,18 +120,18 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if interaction.Type == slack.InteractionTypeInteractionMessage {
+		user := GetUserInfo(interaction.User.ID)
+		if !user.Ok {
+			log.Println("failed to get user info")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		switch interaction.ActionCallback.AttachmentActions[0].Value {
 		case "createIssue":
-			user := GetUserInfo(interaction.User.ID)
-			if !user.Ok {
-				log.Print("failed to get user info")
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
 			uid := interaction.User.ID
 			if err := api.Client.OpenDialogContext(context.TODO(), interaction.TriggerID, MakeIssueDialog(uid)); err != nil {
-				log.Print("open dialog failed: ", err)
+				log.Println("open dialog failed: ", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -139,15 +139,8 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 			overwriteMessage(w, interaction, text)
 
 		case "registerToken":
-			user := GetUserInfo(interaction.User.ID)
-			if !user.Ok {
-				log.Print("failed to get user info")
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
 			if err := api.Client.OpenDialogContext(context.TODO(), interaction.TriggerID, MakeTokenDialog()); err != nil {
-				log.Print("open dialog failed: ", err)
+				log.Println("open dialog failed: ", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -155,13 +148,6 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 			overwriteMessage(w, interaction, text)
 
 		case "cancel":
-			user := GetUserInfo(interaction.User.ID)
-			if !user.Ok {
-				log.Print("failed to get user info")
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
 			text := fmt.Sprintf(":x: Canceled by @%s", user.User.Profile.DisplayName)
 			overwriteMessage(w, interaction, text)
 		}
@@ -181,8 +167,8 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			var _token db.Token
-			token := _token.Get(interaction.User.ID)
+			var token db.Token
+			token.Get(interaction.User.ID)
 
 			err = git.PostIssue(bytes.NewBuffer(jsonValue), interaction.Submission["repository"], token.Token)
 			if err != nil {
@@ -190,7 +176,7 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 				w.WriteHeader(http.StatusInternalServerError)
 				attachment := slack.Attachment{
 					Text:       ":x: Failed to post issue",
-					Color:      "#3AA3E3",
+					Color:      "#2c2d30",
 					CallbackID: "showdialog",
 				}
 				options := slack.MsgOptionAttachments(attachment)
@@ -206,7 +192,7 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 				w.WriteHeader(http.StatusInternalServerError)
 				attachment := slack.Attachment{
 					Text:       ":x: Failed to post issue",
-					Color:      "#3AA3E3",
+					Color:      "#2c2d30",
 					CallbackID: "registertoken",
 				}
 				options := slack.MsgOptionAttachments(attachment)
@@ -217,7 +203,7 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 
 		attachment := slack.Attachment{
 			Text:       ":white_check_mark: Completed!",
-			Color:      "#3AA3E3",
+			Color:      "#2c2d30",
 			CallbackID: "showdialog",
 		}
 		options := slack.MsgOptionAttachments(attachment)
