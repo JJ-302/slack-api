@@ -1,4 +1,4 @@
-package db
+package git
 
 import (
 	"context"
@@ -12,7 +12,7 @@ type Token struct {
 	Token string
 }
 
-func New(token string) *Token {
+func MakeToken(token string) *Token {
 	return &Token{
 		Token: token,
 	}

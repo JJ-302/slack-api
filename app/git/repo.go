@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"projects/slack-api/app/db"
 	"projects/slack-api/config"
 )
 
@@ -22,7 +21,8 @@ func GetRepos(uid string) *[]Repository {
 		log.Println("failed to build request for get repos: ", err)
 		return nil
 	}
-	var token db.Token
+
+	var token Token
 	token.Get(uid)
 
 	req.Header.Set("Authorization", "token "+token.Token)

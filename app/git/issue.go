@@ -60,7 +60,7 @@ func (issue *ResponseIssue) PostIssue(body io.Reader, url, token string) error {
 
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Println("read request body failed: ", err)
+		log.Println("read response body failed: ", err)
 		return err
 	}
 

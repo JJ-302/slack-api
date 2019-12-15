@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"projects/slack-api/app/db"
 	"projects/slack-api/app/git"
 	"projects/slack-api/config"
 	"strings"
@@ -167,7 +166,7 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			var token db.Token
+			var token git.Token
 			token.Get(interaction.User.ID)
 
 			var responseIssue git.ResponseIssue
@@ -197,7 +196,7 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 			api.Client.PostMessage(interaction.Channel.ID, options)
 
 		case "registerToken":
-			token := db.New(interaction.Submission["token"])
+			token := git.MakeToken(interaction.Submission["token"])
 			err := token.Save(interaction.User.ID)
 			if err != nil {
 				log.Printf("Failed to save token: %v", err)
