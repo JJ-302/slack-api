@@ -1,9 +1,11 @@
 package git
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"projects/slack-api/config"
@@ -33,7 +35,7 @@ func MakeIssue(title, body, screenshot string) *Issue {
 	return &issue
 }
 
-func PostIssue(body io.Reader, url, token string) error {
+func (issue *ResponseIssue) PostIssue(body io.Reader, url, token string) error {
 	req, err := http.NewRequest(http.MethodPost, config.Config.RequestURL+"/repos/"+url+"/issues", body)
 	if err != nil {
 		log.Println("failed to build request for post issue: ", err)
@@ -55,5 +57,17 @@ func PostIssue(body io.Reader, url, token string) error {
 	if response.StatusCode != 200 {
 		return errors.New("failed to create issue")
 	}
+
+	responseBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Println("read request body failed: ", err)
+		return err
+	}
+
+	if err = json.Unmarshal(responseBody, issue); err != nil {
+		log.Println("json unmarshal message failed: ", err)
+		return err
+	}
+
 	return nil
 }

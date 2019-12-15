@@ -170,7 +170,8 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 			var token db.Token
 			token.Get(interaction.User.ID)
 
-			err = git.PostIssue(bytes.NewBuffer(jsonValue), interaction.Submission["repository"], token.Token)
+			var responseIssue git.ResponseIssue
+			err = responseIssue.PostIssue(bytes.NewBuffer(jsonValue), interaction.Submission["repository"], token.Token)
 			if err != nil {
 				log.Println(err)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -183,6 +184,17 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 				api.Client.PostMessage(interaction.Channel.ID, options)
 				return
 			}
+
+			text := fmt.Sprintf(
+				":white_check_mark: Created an Issue!\n\n%s\n%s", responseIssue.Title, responseIssue.HTMLURL)
+
+			attachment := slack.Attachment{
+				Text:       text,
+				Color:      "#2c2d30",
+				CallbackID: "showdialog",
+			}
+			options := slack.MsgOptionAttachments(attachment)
+			api.Client.PostMessage(interaction.Channel.ID, options)
 
 		case "registerToken":
 			token := db.New(interaction.Submission["token"])
@@ -199,15 +211,15 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 				api.Client.PostMessage(interaction.Channel.ID, options)
 				return
 			}
-		}
 
-		attachment := slack.Attachment{
-			Text:       ":white_check_mark: Completed!",
-			Color:      "#2c2d30",
-			CallbackID: "showdialog",
+			attachment := slack.Attachment{
+				Text:       ":white_check_mark: Saved a token!",
+				Color:      "#2c2d30",
+				CallbackID: "showdialog",
+			}
+			options := slack.MsgOptionAttachments(attachment)
+			api.Client.PostMessage(interaction.Channel.ID, options)
 		}
-		options := slack.MsgOptionAttachments(attachment)
-		api.Client.PostMessage(interaction.Channel.ID, options)
 
 		w.Header().Add("Content-type", "application/json")
 		w.WriteHeader(http.StatusOK)
