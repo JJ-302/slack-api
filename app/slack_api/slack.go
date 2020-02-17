@@ -146,6 +146,15 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 			text := fmt.Sprintf(":pencil2: Edit by @%s", user.User.Profile.DisplayName)
 			overwriteMessage(w, interaction, text)
 
+		case "joinReach":
+			if user.verify() {
+				text := ":white_check_mark: Verified"
+				overwriteMessage(w, interaction, text)
+			} else {
+				text := ":x: Request failed"
+				overwriteMessage(w, interaction, text)
+			}
+
 		case "cancel":
 			text := fmt.Sprintf(":x: Canceled by @%s", user.User.Profile.DisplayName)
 			overwriteMessage(w, interaction, text)
@@ -235,7 +244,67 @@ func overwriteMessage(w http.ResponseWriter, interaction slack.InteractionCallba
 	json.NewEncoder(w).Encode(&originalMessage)
 }
 
+func (api *SlackApi) messageHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		log.Println("invalid method: ", r.Method)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		writeResponse(w, false)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Println("read request body failed: ", err)
+		writeResponse(w, false)
+		return
+	}
+
+	var user SlackUser
+	if err = json.Unmarshal(body, &user); err != nil {
+		log.Println("json unmarshal slack user failed: ", err)
+		writeResponse(w, false)
+		return
+	}
+
+	user.lookupUserByEmail()
+
+	if user.Ok {
+		attachment := slack.Attachment{
+			Text:       "Hello! If you want to join *Reach* then on press the confirm.",
+			Color:      "#2c2d30",
+			CallbackID: "joinReach",
+			Actions: []slack.AttachmentAction{
+				{
+					Name:  "confirm",
+					Text:  "Confirm",
+					Type:  "button",
+					Style: "primary",
+					Value: "joinReach",
+				}, {
+					Name:  "cancel",
+					Text:  "Cancel",
+					Type:  "button",
+					Style: "danger",
+					Value: "cancel",
+				},
+			},
+		}
+		options := slack.MsgOptionAttachments(attachment)
+		api.Client.PostMessage(user.User.ID, options)
+		writeResponse(w, true)
+	} else {
+		log.Println("slack user does not exist.")
+		writeResponse(w, false)
+	}
+}
+
+func writeResponse(w http.ResponseWriter, result bool) {
+	jsonValue, _ := json.Marshal(map[string]bool{"result": result})
+	w.Write(jsonValue)
+}
+
 func StartApiServer(api SlackApi) error {
 	http.HandleFunc("/interaction", api.interactionHandler)
+	http.HandleFunc("/message", api.messageHandler)
 	return http.ListenAndServe(fmt.Sprintf(":%d", config.Config.Port), nil)
 }

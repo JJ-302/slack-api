@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"projects/slack-api/app/slack_api"
+	slackAPI "projects/slack-api/app/slack_api"
 	"projects/slack-api/config"
 
 	"github.com/nlopes/slack"
