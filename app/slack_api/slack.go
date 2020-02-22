@@ -45,13 +45,13 @@ func (api *SlackApi) ListenOnEvent() {
 					Actions: []slack.AttachmentAction{
 						{
 							Name:  "createIssue",
-							Text:  "Create issue",
+							Text:  "Issueを作成する",
 							Type:  "button",
 							Style: "primary",
 							Value: "createIssue",
 						}, {
 							Name:  "cancel",
-							Text:  "Cancel",
+							Text:  "キャンセル",
 							Type:  "button",
 							Style: "danger",
 							Value: "cancel",
@@ -69,13 +69,13 @@ func (api *SlackApi) ListenOnEvent() {
 					Actions: []slack.AttachmentAction{
 						{
 							Name:  "registerToken",
-							Text:  "Register token",
+							Text:  "トークンを登録する",
 							Type:  "button",
 							Style: "primary",
 							Value: "registerToken",
 						}, {
 							Name:  "cancel",
-							Text:  "Cancel",
+							Text:  "キャンセル",
 							Type:  "button",
 							Style: "danger",
 							Value: "cancel",
@@ -270,19 +270,19 @@ func (api *SlackApi) messageHandler(w http.ResponseWriter, r *http.Request) {
 
 	if user.Ok {
 		attachment := slack.Attachment{
-			Text:       "Hello! If you want to join *Reach* then on press the confirm.",
+			Text:       "Reachへようこそ！参加する場合は`参加する`ボタンを押してください！",
 			Color:      "#2c2d30",
 			CallbackID: "joinReach",
 			Actions: []slack.AttachmentAction{
 				{
 					Name:  "confirm",
-					Text:  "Confirm",
+					Text:  "参加する",
 					Type:  "button",
 					Style: "primary",
 					Value: "joinReach",
 				}, {
 					Name:  "cancel",
-					Text:  "Cancel",
+					Text:  "キャンセル",
 					Type:  "button",
 					Style: "danger",
 					Value: "cancel",
