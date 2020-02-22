@@ -270,7 +270,7 @@ func (api *SlackApi) messageHandler(w http.ResponseWriter, r *http.Request) {
 
 	if user.Ok {
 		attachment := slack.Attachment{
-			Text:       "Reachへようこそ！参加する場合は`参加する`ボタンを押してください！",
+			Text:       "こんにちは！Reachへようこそ！",
 			Color:      "#2c2d30",
 			CallbackID: "joinReach",
 			Actions: []slack.AttachmentAction{
