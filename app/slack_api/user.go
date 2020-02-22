@@ -69,7 +69,7 @@ func (user *SlackUser) lookupUserByEmail() {
 }
 
 func (user *SlackUser) verify() bool {
-	requestURL := "http://127.0.0.1:3001/sessions/update"
+	requestURL := "https://api-reach.herokuapp.com/sessions/update"
 	json, err := json.Marshal(user)
 	if err != nil {
 		log.Println("fail to marshal json: ", err)
