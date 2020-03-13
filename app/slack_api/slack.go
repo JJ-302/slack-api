@@ -39,7 +39,7 @@ func (api *SlackApi) ListenOnEvent() {
 			msg := strings.Split(strings.TrimSpace(ev.Msg.Text), " ")[1:]
 			if len(msg) != 0 && msg[0] == "issue" {
 				attachment := slack.Attachment{
-					Text:       "Hello! May I help you?",
+					Text:       "こんにちは！",
 					Color:      "#2c2d30",
 					CallbackID: "createIssue",
 					Actions: []slack.AttachmentAction{
@@ -63,7 +63,7 @@ func (api *SlackApi) ListenOnEvent() {
 
 			} else if len(msg) != 0 && msg[0] == "token" {
 				attachment := slack.Attachment{
-					Text:       "Hello! May I help you?",
+					Text:       "こんにちは！",
 					Color:      "#2c2d30",
 					CallbackID: "registerToken",
 					Actions: []slack.AttachmentAction{
@@ -134,7 +134,7 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			text := fmt.Sprintf(":pencil2: Edit by @%s", user.User.Profile.DisplayName)
+			text := fmt.Sprintf(":pencil2: @%s さんが編集中です。", user.User.Profile.DisplayName)
 			overwriteMessage(w, interaction, text)
 
 		case "registerToken":
@@ -148,15 +148,15 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 
 		case "joinReach":
 			if user.verify() {
-				text := ":white_check_mark: Verified"
+				text := ":white_check_mark: 認証が完了しました！"
 				overwriteMessage(w, interaction, text)
 			} else {
-				text := ":x: Request failed"
+				text := ":x: 認証に失敗しました。"
 				overwriteMessage(w, interaction, text)
 			}
 
 		case "cancel":
-			text := fmt.Sprintf(":x: Canceled by @%s", user.User.Profile.DisplayName)
+			text := fmt.Sprintf(":x: @%s さんがキャンセルしました", user.User.Profile.DisplayName)
 			overwriteMessage(w, interaction, text)
 		}
 
@@ -184,7 +184,7 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 				log.Println(err)
 				w.WriteHeader(http.StatusInternalServerError)
 				attachment := slack.Attachment{
-					Text:       ":x: Failed to post issue",
+					Text:       ":x: Issueの投稿に失敗しました。",
 					Color:      "#2c2d30",
 					CallbackID: "showdialog",
 				}
@@ -194,7 +194,7 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 			}
 
 			text := fmt.Sprintf(
-				":white_check_mark: Created an Issue!\n\n%s\n%s", responseIssue.Title, responseIssue.HTMLURL)
+				":white_check_mark: Issueを作成しました！\n\n%s\n%s", responseIssue.Title, responseIssue.HTMLURL)
 
 			attachment := slack.Attachment{
 				Text:       text,
@@ -211,7 +211,7 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 				log.Printf("Failed to save token: %v", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				attachment := slack.Attachment{
-					Text:       ":x: Failed to post issue",
+					Text:       ":x: トークンの登録に失敗しました。",
 					Color:      "#2c2d30",
 					CallbackID: "registertoken",
 				}
@@ -221,7 +221,7 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 			}
 
 			attachment := slack.Attachment{
-				Text:       ":white_check_mark: Saved a token!",
+				Text:       ":white_check_mark: トークンを登録しました！",
 				Color:      "#2c2d30",
 				CallbackID: "showdialog",
 			}
