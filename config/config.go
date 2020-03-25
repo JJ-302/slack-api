@@ -10,6 +10,7 @@ import (
 type ConfigList struct {
 	Port       int
 	ChickTag   string
+	MyID       string
 	Token      string
 	SlackURL   string
 	BotID      string
@@ -29,6 +30,7 @@ func init() {
 	Config = ConfigList{
 		Port:       cfg.Section("web").Key("port").MustInt(),
 		ChickTag:   cfg.Section("api").Key("chicktag").String(),
+		MyID:       cfg.Section("api").Key("myID").String(),
 		Token:      cfg.Section("api").Key("token").String(),
 		SlackURL:   cfg.Section("api").Key("url").String(),
 		BotID:      cfg.Section("api").Key("botID").String(),

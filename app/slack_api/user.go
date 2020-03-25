@@ -22,8 +22,20 @@ type SlackUser struct {
 }
 
 func GetUserInfo(userID string) *SlackUser {
-	requestURL := config.Config.SlackURL + "/users.info?token=" + config.Config.Token + "&user=" + userID
-	response, err := http.Get(requestURL)
+	request, err := http.NewRequest(http.MethodGet, config.Config.SlackURL+"/users.info", nil)
+	if err != nil {
+		log.Println("failed to create a new request:", err)
+		return &SlackUser{}
+	}
+
+	params := request.URL.Query()
+	params.Set("token", config.Config.Token)
+	params.Set("user", userID)
+	request.URL.RawQuery = params.Encode()
+
+	client := &http.Client{}
+
+	response, err := client.Do(request)
 	if err != nil {
 		log.Println("failed to request for get user info: ", err)
 		return &SlackUser{}
@@ -47,8 +59,20 @@ func GetUserInfo(userID string) *SlackUser {
 }
 
 func (user *SlackUser) lookupUserByEmail() {
-	requestURL := config.Config.SlackURL + "/users.lookupByEmail?token=" + config.Config.Token + "&email=" + user.User.Profile.Email
-	response, err := http.Get(requestURL)
+	request, err := http.NewRequest(http.MethodGet, config.Config.SlackURL+"/users.lookupByEmail", nil)
+	if err != nil {
+		log.Println("failed to create a new request:", err)
+		return
+	}
+
+	params := request.URL.Query()
+	params.Set("token", config.Config.Token)
+	params.Set("email", user.User.Profile.Email)
+	request.URL.RawQuery = params.Encode()
+
+	client := &http.Client{}
+
+	response, err := client.Do(request)
 	if err != nil {
 		log.Println("failed to request for get user info: ", err)
 		return

@@ -41,14 +41,14 @@ func MakeIssueDialog(uid string) slack.Dialog {
 				Label:       "Contents",
 				Type:        slack.InputTypeTextArea,
 				Name:        "issueContents",
-				Placeholder: "内容を入力してください",
+				Placeholder: "内容を入力してください（マークダウン可）",
 			},
 			slack.DialogInput{
 				Label:       "ScreenShot",
 				Type:        slack.InputTypeTextArea,
 				Name:        "screenShot",
 				Optional:    true,
-				Placeholder: "マークダウン形式で貼り付けてください",
+				Placeholder: "画像のURLをマークダウンで貼り付けてください",
 			},
 		},
 	}
