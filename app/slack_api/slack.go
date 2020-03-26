@@ -28,62 +28,88 @@ func (api *SlackApi) ListenOnEvent() {
 	for msg := range rtm.IncomingEvents {
 		switch ev := msg.Data.(type) {
 		case *slack.MessageEvent:
-			if ev.Channel != config.Config.ChickTag {
-				break
-			}
-
 			if !strings.HasPrefix(ev.Msg.Text, fmt.Sprintf("<@%s>", api.BotID)) {
 				break
 			}
 
-			msg := strings.Split(strings.TrimSpace(ev.Msg.Text), " ")[1:]
-			if len(msg) != 0 && msg[0] == "issue" {
-				attachment := slack.Attachment{
-					Text:       "こんにちは！",
-					Color:      "#2c2d30",
-					CallbackID: "createIssue",
-					Actions: []slack.AttachmentAction{
-						{
-							Name:  "createIssue",
-							Text:  "Issueを作成する",
-							Type:  "button",
-							Style: "primary",
-							Value: "createIssue",
-						}, {
-							Name:  "cancel",
-							Text:  "キャンセル",
-							Type:  "button",
-							Style: "danger",
-							Value: "cancel",
+			if ev.Channel == config.Config.MyID {
+				msg := strings.Split(strings.TrimSpace(ev.Msg.Text), " ")[1:]
+				if len(msg) != 0 && msg[0] == "release" {
+					attachment := slack.Attachment{
+						Text:       "リリースを通知します",
+						Color:      "#2c2d30",
+						CallbackID: "createIssue",
+						Actions: []slack.AttachmentAction{
+							{
+								Name:  "release",
+								Text:  "リリースの詳細を入力",
+								Type:  "button",
+								Style: "primary",
+								Value: "release",
+							}, {
+								Name:  "cancel",
+								Text:  "キャンセル",
+								Type:  "button",
+								Style: "danger",
+								Value: "cancel",
+							},
 						},
-					},
+					}
+					options := slack.MsgOptionAttachments(attachment)
+					api.Client.PostMessage(ev.Channel, options)
 				}
-				options := slack.MsgOptionAttachments(attachment)
-				api.Client.PostMessage(ev.Channel, options)
+			}
 
-			} else if len(msg) != 0 && msg[0] == "token" {
-				attachment := slack.Attachment{
-					Text:       "こんにちは！",
-					Color:      "#2c2d30",
-					CallbackID: "registerToken",
-					Actions: []slack.AttachmentAction{
-						{
-							Name:  "registerToken",
-							Text:  "トークンを登録する",
-							Type:  "button",
-							Style: "primary",
-							Value: "registerToken",
-						}, {
-							Name:  "cancel",
-							Text:  "キャンセル",
-							Type:  "button",
-							Style: "danger",
-							Value: "cancel",
+			if ev.Channel == config.Config.ChickTag {
+				msg := strings.Split(strings.TrimSpace(ev.Msg.Text), " ")[1:]
+				if len(msg) != 0 && msg[0] == "issue" {
+					attachment := slack.Attachment{
+						Text:       "こんにちは！",
+						Color:      "#2c2d30",
+						CallbackID: "createIssue",
+						Actions: []slack.AttachmentAction{
+							{
+								Name:  "createIssue",
+								Text:  "Issueを作成する",
+								Type:  "button",
+								Style: "primary",
+								Value: "createIssue",
+							}, {
+								Name:  "cancel",
+								Text:  "キャンセル",
+								Type:  "button",
+								Style: "danger",
+								Value: "cancel",
+							},
 						},
-					},
+					}
+					options := slack.MsgOptionAttachments(attachment)
+					api.Client.PostMessage(ev.Channel, options)
+
+				} else if len(msg) != 0 && msg[0] == "token" {
+					attachment := slack.Attachment{
+						Text:       "こんにちは！",
+						Color:      "#2c2d30",
+						CallbackID: "registerToken",
+						Actions: []slack.AttachmentAction{
+							{
+								Name:  "registerToken",
+								Text:  "トークンを登録する",
+								Type:  "button",
+								Style: "primary",
+								Value: "registerToken",
+							}, {
+								Name:  "cancel",
+								Text:  "キャンセル",
+								Type:  "button",
+								Style: "danger",
+								Value: "cancel",
+							},
+						},
+					}
+					options := slack.MsgOptionAttachments(attachment)
+					api.Client.PostMessage(ev.Channel, options)
 				}
-				options := slack.MsgOptionAttachments(attachment)
-				api.Client.PostMessage(ev.Channel, options)
 			}
 		}
 	}
@@ -143,7 +169,7 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			text := fmt.Sprintf(":pencil2: Edit by @%s", user.User.Profile.DisplayName)
+			text := fmt.Sprintf(":pencil2: @%s さんが編集中です。", user.User.Profile.DisplayName)
 			overwriteMessage(w, interaction, text)
 
 		case "joinReach":
@@ -154,6 +180,15 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 				text := ":x: 認証に失敗しました。"
 				overwriteMessage(w, interaction, text)
 			}
+
+		case "release":
+			if err := api.Client.OpenDialogContext(context.TODO(), interaction.TriggerID, MakeReleaseDialog()); err != nil {
+				log.Println("open dialog failed: ", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			text := fmt.Sprintf(":pencil2: @%s さんが編集中です。", user.User.Profile.DisplayName)
+			overwriteMessage(w, interaction, text)
 
 		case "cancel":
 			text := fmt.Sprintf(":x: @%s さんがキャンセルしました", user.User.Profile.DisplayName)
@@ -227,6 +262,22 @@ func (api *SlackApi) interactionHandler(w http.ResponseWriter, r *http.Request) 
 			}
 			options := slack.MsgOptionAttachments(attachment)
 			api.Client.PostMessage(interaction.Channel.ID, options)
+
+		case "postRelease":
+			text := releaseMessageFormat(
+				interaction.Submission["releaseChannel"],
+				interaction.Submission["platform"],
+				interaction.Submission["version"],
+				interaction.Submission["releaseNote"],
+			)
+
+			attachment := slack.Attachment{
+				Text:       text,
+				Color:      "#2c2d30",
+				CallbackID: "postReleaseMessage",
+			}
+			options := slack.MsgOptionAttachments(attachment)
+			api.Client.PostMessage(config.Config.ChickTagDev, options)
 		}
 
 		w.Header().Add("Content-type", "application/json")
@@ -242,6 +293,18 @@ func overwriteMessage(w http.ResponseWriter, interaction slack.InteractionCallba
 	originalMessage.Attachments = []slack.Attachment{}
 	w.Header().Add("Content-type", "application/json")
 	json.NewEncoder(w).Encode(&originalMessage)
+}
+
+func releaseMessageFormat(releaseChannel, platform, version, releaseNote string) string {
+	var storeURL string
+	if platform == "Android" {
+		storeURL = config.Config.AndroidURL
+	} else if platform == "iOS" {
+		storeURL = config.Config.IOSURL
+	}
+	text := fmt.Sprintf(":tada: アプリがリリースされました！\n\n*【Channel】*\n%s\n\n*【Platform】*\n%s\n%s\n\n*【Version】*\n%s\n\n*【ReleaseNote】*\n```%s```", releaseChannel, platform, storeURL, version, releaseNote)
+
+	return text
 }
 
 func (api *SlackApi) messageHandler(w http.ResponseWriter, r *http.Request) {

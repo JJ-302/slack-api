@@ -71,3 +71,62 @@ func MakeTokenDialog() slack.Dialog {
 	}
 	return dialog
 }
+
+func MakeReleaseDialog() slack.Dialog {
+	dialog := slack.Dialog{
+		Title:       "Release",
+		SubmitLabel: "Submit",
+		CallbackID:  "postRelease",
+		Elements: []slack.DialogElement{
+			slack.DialogInputSelect{
+				DialogInput: slack.DialogInput{
+					Label:       "Release channel",
+					Type:        slack.InputTypeSelect,
+					Name:        "releaseChannel",
+					Placeholder: "Release channelを選択してください",
+				},
+				Options: []slack.DialogSelectOption{
+					slack.DialogSelectOption{
+						Label: "Production",
+						Value: "Production",
+					},
+					slack.DialogSelectOption{
+						Label: "Staging",
+						Value: "Staging",
+					},
+				},
+			},
+			slack.DialogInputSelect{
+				DialogInput: slack.DialogInput{
+					Label:       "Platform",
+					Type:        slack.InputTypeSelect,
+					Name:        "platform",
+					Placeholder: "Platformを選択してください",
+				},
+				Options: []slack.DialogSelectOption{
+					slack.DialogSelectOption{
+						Label: "iOS",
+						Value: "iOS",
+					},
+					slack.DialogSelectOption{
+						Label: "Android",
+						Value: "Android",
+					},
+				},
+			},
+			slack.DialogInput{
+				Label:       "Version",
+				Type:        slack.InputTypeText,
+				Name:        "version",
+				Placeholder: "Versionを入力してください",
+			},
+			slack.DialogInput{
+				Label:       "Release note",
+				Type:        slack.InputTypeTextArea,
+				Name:        "releaseNote",
+				Placeholder: "Release noteを入力してください",
+			},
+		},
+	}
+	return dialog
+}
